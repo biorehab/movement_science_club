@@ -14,4 +14,4 @@ conda activate myenv
 
 ## Content
 
-#### [2025 Mar 12:  Statics of (planar) Kinematics Chains](statics_kinematic_chain/three-link-arm.html)
+#### [2025 Mar 12:  Statics of (planar) Kinematic Chain](statics_kinematic_chain/three-link-arm.html)
