@@ -6,22 +6,87 @@
     <title>Three-Link Planar Arm Statics</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+        }
+        .controls {
+            width: 30%;
+            padding: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+        .results {
+            width: 70%;
+            padding: 20px;
+        }
         #plot {
             border: 1px solid #ccc;
+            background-color: #f9f9f9;
         }
     </style>
 </head>
 <body>
-<h2>Three-Link Planar Arm Statics</h2>
-<div>
-    <label>Link 1 Length: <input type="range" id="l1" min="0.5" max="2" step="0.1" value="1"></label><br>
-    <label>Link 2 Length: <input type="range" id="l2" min="0.5" max="2" step="0.1" value="1"></label><br>
-    <label>Link 3 Length: <input type="range" id="l3" min="0.5" max="2" step="0.1" value="1"></label><br>
-    <label>Torque 1: <input type="range" id="tau1" min="-10" max="10" step="0.1" value="0"></label><br>
-    <label>Torque 2: <input type="range" id="tau2" min="-10" max="10" step="0.1" value="0"></label><br>
-    <label>Torque 3: <input type="range" id="tau3" min="-10" max="10" step="0.1" value="0"></label><br>
+
+<div class="controls">
+    <h2>Controls</h2>
+    <div class="control-group">
+        <label>Link 1 Length (m): <span id="l1Value">0.3</span></label>
+        <input type="range" id="l1" min="0.1" max="0.6" step="0.01" value="0.3">
+    </div>
+    <div class="control-group">
+        <label>Link 2 Length (m): <span id="l2Value">0.35</span></label>
+        <input type="range" id="l2" min="0.1" max="0.6" step="0.01" value="0.35">
+    </div>
+    <div class="control-group">
+        <label>Link 3 Length (m): <span id="l3Value">0.2</span></label>
+        <input type="range" id="l3" min="0.05" max="0.6" step="0.01" value="0.2">
+    </div>
+    <div class="control-group">
+        <label>Joint Angle 1 (deg): <span id="ang1Value">0</span></label>
+        <input type="range" id="theta1" min="0" max="180" step="0.1" value="0">
+    </div>
+    <div class="control-group">
+        <label>Joint Angle 2 (deg): <span id="ang2Value">0</span></label>
+        <input type="range" id="theta2" min="0" max="180" step="0.1" value="90">
+    </div>
+    <div class="control-group">
+        <label>Joint Angle 3 (deg): <span id="ang3Value">0</span></label>
+        <input type="range" id="theta3" min="0" max="180" step="0.1" value="45">
+    </div>
+    <div class="control-group">
+        <label>Joint Torque 1 (deg): <span id="torque1Value">0</span></label>
+        <input type="range" id="theta1" min="-3" max="3" step="0.01" value="0">
+    </div>
+    <div class="control-group">
+        <label>Joint Torque 2 (deg): <span id="torque2Value">0</span></label>
+        <input type="range" id="theta2" min="-3" max="3" step="0.01" value="0">
+    </div>
+    <div class="control-group">
+        <label>Joint Torque 3 (deg): <span id="torque3Value">0</span></label>
+        <input type="range" id="theta3" min="-3" max="3" step="0.01" value="0">
+    </div>
 </div>
-<svg id="plot" width="500" height="500"></svg>
+
+<div class="results">
+    <h2>Arm Visualization</h2>
+    <svg id="plot" width="500" height="500"></svg>
+</div>
+
+<div class="results">
+    <h2>End-Effector Position</h2>
+    <p><strong>X:</strong> <span id="xPos">0.00</span> m</p>
+    <p><strong>Y:</strong> <span id="yPos">0.00</span> m</p>
+
+    <h2>Joint Torques</h2>
+    <p><strong>Torque 1:</strong> <span id="torque1">0.00</span> Nm</p>
+    <p><strong>Torque 2:</strong> <span id="torque2">0.00</span> Nm</p>
+    <p><strong>Torque 3:</strong> <span id="torque3">0.00</span> Nm</p>
+</div>
 
 <script>
 const svg = d3.select("#plot");
@@ -29,52 +94,69 @@ const width = +svg.attr("width");
 const height = +svg.attr("height");
 const origin = {x: width/2, y: height/2};
 
+// Update slider values
+document.querySelectorAll('input[type="range"]').forEach(input => {
+    const id = input.id;
+    const value = document.getElementById(id + 'Value');
+    input.addEventListener('input', () => {
+        value.innerText = input.value;
+    });
+});
+
 function updateArm() {
-    const l1 = +document.getElementById('l1').value * 50;
-    const l2 = +document.getElementById('l2').value * 50;
-    const l3 = +document.getElementById('l3').value * 50;
+    const l1 = +document.getElementById('l1').value * 250;
+    const l2 = +document.getElementById('l2').value * 250;
+    const l3 = +document.getElementById('l3').value * 250;
 
-    const tau1 = +document.getElementById('tau1').value;
-    const tau2 = +document.getElementById('tau2').value;
-    const tau3 = +document.getElementById('tau3').value;
+    const theta1 = +document.getElementById('theta1').value;
+    const theta2 = +document.getElementById('theta2').value;
+    const theta3 = +document.getElementById('theta3').value;
 
-    const theta1 = tau1 * 2 * Math.PI / 20;
-    const theta2 = tau2 * 2 * Math.PI / 20;
-    const theta3 = tau3 * 2 * Math.PI / 20;
+    const theta1r = theta1 * Math.PI / 180;
+    const theta2r = theta2 * Math.PI / 180;
+    const theta3r = theta3 * Math.PI / 180;
 
-    const x1 = origin.x + l1 * Math.cos(theta1);
-    const y1 = origin.y - l1 * Math.sin(theta1);
+    const x1 = origin.x + l1 * Math.cos(theta1r);
+    const y1 = origin.y - l1 * Math.sin(theta1r);
 
-    const x2 = x1 + l2 * Math.cos(theta1 + theta2);
-    const y2 = y1 - l2 * Math.sin(theta1 + theta2);
+    const x2 = x1 + l2 * Math.cos(theta1r + theta2r);
+    const y2 = y1 - l2 * Math.sin(theta1r + theta2r);
 
-    const x3 = x2 + l3 * Math.cos(theta1 + theta2 + theta3);
-    const y3 = y2 - l3 * Math.sin(theta1 + theta2 + theta3);
+    const x3 = x2 + l3 * Math.cos(theta1r + theta2r + theta3r);
+    const y3 = y2 - l3 * Math.sin(theta1r + theta2r + theta3r);
 
     svg.selectAll("line").remove();
+    svg.selectAll("circle").remove();
 
-    svg.append("line")
-        .attr("x1", origin.x).attr("y1", origin.y)
-        .attr("x2", x1).attr("y2", y1)
-        .attr("stroke", "black").attr("stroke-width", 2);
+    svg.append("line").attr("x1", origin.x).attr("y1", origin.y)
+        .attr("x2", x1).attr("y2", y1).attr("stroke", "#3498db").attr("stroke-width", 4);
 
-    svg.append("line")
-        .attr("x1", x1).attr("y1", y1)
-        .attr("x2", x2).attr("y2", y2)
-        .attr("stroke", "black").attr("stroke-width", 2);
+    svg.append("line").attr("x1", x1).attr("y1", y1)
+        .attr("x2", x2).attr("y2", y2).attr("stroke", "#e74c3c").attr("stroke-width", 4);
 
-    svg.append("line")
-        .attr("x1", x2).attr("y1", y2)
-        .attr("x2", x3).attr("y2", y3)
-        .attr("stroke", "black").attr("stroke-width", 2);
+    svg.append("line").attr("x1", x2).attr("y1", y2)
+        .attr("x2", x3).attr("y2", y3).attr("stroke", "#2ecc71").attr("stroke-width", 4);
+
+    svg.append("circle").attr("cx", x1).attr("cy", y1).attr("r", 5).attr("fill", "#3498db");
+    svg.append("circle").attr("cx", x2).attr("cy", y2).attr("r", 5).attr("fill", "#e74c3c");
+    svg.append("circle").attr("cx", x3).attr("cy", y3).attr("r", 5).attr("fill", "#2ecc71");
+
+    // Update end-effector position
+    document.getElementById('xPos').innerText = (x3 / 50).toFixed(2);
+    document.getElementById('yPos').innerText = (y3 / 50).toFixed(2);
+
+    // Dummy torque calculation (replace with real equations)
+    document.getElementById('torque1').innerText = (l1 * Math.sin(theta1r)).toFixed(2);
+    document.getElementById('torque2').innerText = (l2 * Math.sin(theta2r)).toFixed(2);
+    document.getElementById('torque3').innerText = (l3 * Math.sin(theta3r)).toFixed(2);
 }
 
-// Attach event listeners
-['l1', 'l2', 'l3', 'tau1', 'tau2', 'tau3'].forEach(id => {
+['l1', 'l2', 'l3', 'theta1', 'theta2', 'theta3'].forEach(id => {
     document.getElementById(id).addEventListener('input', updateArm);
 });
 
 updateArm();
 </script>
+
 </body>
 </html>
