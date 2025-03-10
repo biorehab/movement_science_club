@@ -1,0 +1,11 @@
+name: movsci
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - matplotlib
+  - pandas
+  - scipy
+  - jupyter
+prefix: /Users/siva82kb/anaconda3/envs/movsci
