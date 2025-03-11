@@ -71,7 +71,6 @@
         <label>Joint Torque 3 (deg): <span id="torque3Value">0</span></label>
         <input type="range" id="torque3" min="-3" max="3" step="0.01" value="0">
     </div>
-    <button id="resetButton">Reset Value</button>
 </div>
 
 <!-- Plot area in white background with no boder. -->
@@ -84,27 +83,24 @@
 </div>
 
 <div class="results">
-    <p><strong>Endpoint Position (m):</strong>
+    <p><strong>End-Effector Position (m):</strong>
         [<span id="xPos">0.00</span>,
         <span id="yPos">0.00</span>]
     </p>
-    <p><strong>Endpoint Force (N): </strong>
-        [<span id="epforcex">0.00</span>, 
-        <span id="epforcey">0.00</span>]
-    </p>
-    <p><strong>Endpoint Moment (Nm): </strong>
-        <span id="epmoment">0.00</span>
+    <p><strong>Joint Torque (Nm): </strong>
+        [<span id="torque1">0.00</span>, 
+        <span id="torque2">0.00</span>, 
+        <span id="torque3">0.00</span>]
     </p>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.1/math.min.js"></script>
 <script>
     // Page level constants
-    const lengthToPixelScale = 300;
+    const lengthToPixelScale = 250;
     const svg = d3.select("#plot");
     const width = +svg.attr("width");
     const height = +svg.attr("height");
-    const origin = {x: width/2, y: 3 * height/4};
+    const origin = {x: width/2, y: height/2};
 
     // Update slider values
     document.querySelectorAll('input[type="range"]').forEach(input => {
@@ -115,60 +111,21 @@
         });
     });
 
-    // Reset sliders.
-    document.getElementById('resetButton').addEventListener('click', () => {
-        const defaults = {
-            l1: 0.3, l2: 0.35, l3: 0.2,
-            theta1: 0, theta2: 90, theta3: 45,
-            torque1: 0, torque2: 0, torque3: 0
-        };
-
-        for (const key in defaults) {
-            const slider = document.getElementById(key);
-            slider.value = defaults[key];
-            document.getElementById(key + 'Value').textContent = defaults[key];
-            slider.dispatchEvent(new Event('input'));
-        }
-    });
-
     // Three link arm class.
     class ThreeLinkArm {
-        #jacobian = math.zeros(3, 3);
-
         constructor(lengths, angles) {
             this.lengths = lengths;
             this.angles = angles;
-            this.#updateJacobian();
         }
     
         setAngles(newAngles) {
             this.angles = newAngles;
-            this.#updateJacobian();
         }
 
         setLengths(newLengths) {
             this.lengths = newLengths;
-            this.#updateJacobian();
         }
     
-        #updateJacobian() {
-            const _sterms = cummulativeSum(this.angles).map(angle => Math.sin(angle));
-            const _cterms = cummulativeSum(this.angles).map(angle => Math.cos(angle));
-            this.#jacobian.set([0, 0], -this.lengths[0] * _sterms[0] - this.lengths[1] * _sterms[1] - this.lengths[2] * _sterms[2]);
-            this.#jacobian.set([0, 1], -this.lengths[1] * _sterms[1] - this.lengths[2] * _sterms[2]);
-            this.#jacobian.set([0, 2], -this.lengths[2] * _sterms[2]);
-            this.#jacobian.set([1, 0], this.lengths[0] * _cterms[0] + this.lengths[1] * _cterms[1] + this.lengths[2] * _cterms[2]);
-            this.#jacobian.set([1, 1], this.lengths[1] * _cterms[1] + this.lengths[2] * _cterms[2]);
-            this.#jacobian.set([1, 2], this.lengths[2] * _cterms[2]);
-            this.#jacobian.set([2, 0], 1);
-            this.#jacobian.set([2, 1], 1);
-            this.#jacobian.set([2, 2], 1);
-        }
-
-        getJacobian() {
-            return this.#jacobian;
-        }
-
         getArmPositions() {
             const cusumtheta = cummulativeSum(this.angles);
             const x1 = 0, y1 = 0;
@@ -179,15 +136,6 @@
             const x4 = x3 + this.lengths[2] * Math.cos(cusumtheta[2]);
             const y4 = y3 + this.lengths[2] * Math.sin(cusumtheta[2]);
             return [[x1, y1], [x2, y2], [x3, y3], [x4, y4]];
-        }
-
-        forwardStatics(torque) {
-            try {
-                const pinvJ = math.pinv(math.transpose(this.getJacobian()));
-                return math.multiply(pinvJ, math.reshape(torque, [-1, 1])).toArray().flat();
-            } catch (error) {
-                return null;
-            }
         }
     }
 
@@ -212,15 +160,15 @@
         const angleInRadians = angleInDegrees;
         return {
             x: centerX + (radius * Math.cos(angleInRadians)),
-            y: centerY - (radius * Math.sin(angleInRadians))
+            y: centerY + (radius * Math.sin(angleInRadians))
         };
     }
 
     function describeArc(x, y, radius, startAngle, endAngle) {
-        const start = polarToCartesian(x, y, radius, startAngle);
-        const end = polarToCartesian(x, y, radius, endAngle);
+        const start = polarToCartesian(x, y, radius, endAngle);
+        const end = polarToCartesian(x, y, radius, startAngle);
         const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-        const sweetDir = endAngle - startAngle >= 0 ? "0" : "1";
+        const sweetDir = endAngle - startAngle >= 0 ? "0" : "1"
         return `
             M ${start.x} ${start.y}
             A ${radius} ${radius} 0 ${largeArcFlag} ${sweetDir} ${end.x} ${end.y}
@@ -229,7 +177,7 @@
     // End of useful functions
 
     // Other plotting related functions.
-    function getJoinTorqueArcInfo(angle, torque, scale=0.25) {
+    function getJoinTorqueArcInfo(angle, torque, scale=0.5) {
         const taustrtang = angle;
         const tauendang = angle + torque * Math.PI * scale;
         return [taustrtang, tauendang];
@@ -265,26 +213,19 @@
 
         // Update visualization
         const armpos = arm.getArmPositions();
-        const epforce = arm.forwardStatics(torque);
-        // Endpot force components
-        const epforcecomps = [
-            arm.forwardStatics([torque[0], 0, 0]),
-            arm.forwardStatics([0, torque[1], 0]),
-            arm.forwardStatics([0, 0, torque[2]])
-        ];
-        updateArmVisualization(arm.angles, armpos, origin, torque, epforce, epforcecomps);
+        updateArmVisualization(armpos, origin, torque);
 
         // Update end-effector position
         document.getElementById('xPos').innerText = armpos[3][0].toFixed(2);
         document.getElementById('yPos').innerText = armpos[3][1].toFixed(2);
 
-        // End point force calculation
-        document.getElementById('epforcex').innerText = epforce[0].toFixed(2);
-        document.getElementById('epforcey').innerText = epforce[1].toFixed(2);
-        document.getElementById('epmoment').innerText = epforce[2].toFixed(2);
+        // Dummy torque calculation (replace with real equations)
+        document.getElementById('torque1').innerText = (lengths[0] * Math.sin(thetar[0])).toFixed(2);
+        document.getElementById('torque2').innerText = (lengths[1] * Math.sin(thetar[1])).toFixed(2);
+        document.getElementById('torque3').innerText = (lengths[2] * Math.sin(thetar[2])).toFixed(2);
     }
 
-    function updateArmVisualization(angles, armpos, origin, torque, epforce, epforcecomps) {
+    function updateArmVisualization(armpos, origin, torque) {
         svg.selectAll("line").remove();
         svg.selectAll("circle").remove();
         svg.selectAll("path").remove();
@@ -306,7 +247,7 @@
                 .attr("x2", armpos[i+1][0])
                 .attr("y2", armpos[i+1][1])
                 .attr("stroke", "#8888ff")
-                .attr("stroke-width", 3);
+                .attr("stroke-width", 2);
         }
 
         // Draw joints
@@ -320,98 +261,26 @@
         });
 
         // Draw the torque arcs around joints.
-        const cusumangles = cummulativeSum(angles);
+        const cusumangles = cummulativeSum(arm.angles);
         const torqArcAngles = cusumangles.map((angle, i) => getJoinTorqueArcInfo(angle, torque[i]));
-        const compcolors = ["black", "violet", "brown"]
         torqArcAngles.forEach((angles, i) => {
             const arcPath = describeArc(armpos[i][0], armpos[i][1], 20, angles[0], angles[1]);
             svg.append("path")
                 .attr("d", arcPath)
-                .attr("stroke", compcolors[i])
+                .attr("stroke", "red")
                 .attr("fill", "none")
                 .attr("stroke-width", 1.5);
         });
 
-        // Endpoint force.
-        if (epforce) {
-            // Draw an arrow to represent the force.
-            const forceEnd = [armpos[3][0] - epforce[0] * lengthToPixelScale * 0.025,
-                              armpos[3][1] + epforce[1] * lengthToPixelScale * 0.025];
-            // Don't draw the arrow if the force is too small
-            if (math.norm(epforce) > 0.05) {
-                // Define the arrow marker
-                svg.append("defs").append("marker")
-                    .attr("id", "arrow")
-                    .attr("viewBox", "0 0 10 10")
-                    .attr("refX", 9)
-                    .attr("refY", 5)
-                    .attr("markerWidth", 6)
-                    .attr("markerHeight", 6)
-                    .attr("orient", "auto-start-reverse")
-                    .append("path")
-                    .attr("d", "M 0 0 L 10 5 L 0 10 z")
-                    .attr("fill", "red")
-                    .attr("stroke", "red");
-
-                // Draw the line with the arrow
-                svg.append("line")
-                    .attr("x1", armpos[3][0])
-                    .attr("y1", armpos[3][1])
-                    .attr("x2", forceEnd[0])
-                    .attr("y2", forceEnd[1])
-                    .attr("fill", "red")
-                    .attr("stroke", "red")
-                    .attr("marker-end", "url(#arrow)")
-                    .attr("stroke-width", 1.5);
-            }
-
-            // Let's draw the force components with thinner and lighter arrows.
-            // Component 1
-            const _force1 = [armpos[3][0] - epforcecomps[0][0] * lengthToPixelScale * 0.025,
-                             armpos[3][1] + epforcecomps[0][1] * lengthToPixelScale * 0.025];
-            // Do the above computation for all components.
-            const _fcomps = epforcecomps.map((fcomp) => [
-                armpos[3][0] - fcomp[0] * lengthToPixelScale * 0.025,
-                armpos[3][1] + fcomp[1] * lengthToPixelScale * 0.025
-            ]);
-            _fcomps.forEach((_fc, i) => {
-                if (math.norm(epforce) > 0.05 && math.norm(_fc) > 0.05) {
-                    // Define the arrow marker
-                    svg.append("defs").append("marker")
-                        .attr("id", "arrow")
-                        .attr("viewBox", "0 0 10 10")
-                        .attr("refX", 9)
-                        .attr("refY", 5)
-                        .attr("markerWidth", 6)
-                        .attr("markerHeight", 6)
-                        .attr("orient", "auto-start-reverse")
-                        .append("path")
-                        .attr("d", "M 0 0 L 10 5 L 0 10 z")
-                        .attr("fill", compcolors[i])
-                        .attr("stroke", compcolors[i]);
-
-                    // Draw the line with the arrow
-                    svg.append("line")
-                        .attr("x1", armpos[3][0])
-                        .attr("y1", armpos[3][1])
-                        .attr("x2", _fc[0])
-                        .attr("y2", _fc[1])
-                        .attr("fill", compcolors[i])
-                        .attr("stroke", compcolors[i])
-                        .attr("marker-end", "url(#arrow)")
-                        .attr("stroke-width", 1);
-                }
-            });
-            
-            // Draw the arc for the endpoint moment (epforce[2])
-            const torqArcAngle = getJoinTorqueArcInfo(math.sum(angles), epforce[2] / 2);
-            const arcPath = describeArc(armpos[3][0], armpos[3][1], 15, torqArcAngle[0] - Math.PI, torqArcAngle[1] - Math.PI);
-            svg.append("path")
-                .attr("d", arcPath)
-                .attr("stroke", "green")
-                .attr("fill", "none")
-                .attr("stroke-width", 1.5);
-        }
+        // // Start angle and end angle for the arc.
+        // const taustrtang = arm.angles[0];
+        // const tauendang = arm.angles[0] + torque[0] * Math.PI * 0.5;
+        // const arcPath = describeArc(armpos[0][0], armpos[0][1], 20, taustrtang, tauendang);
+        // svg.append("path")
+        //     .attr("d", arcPath)
+        //     .attr("stroke", "red")
+        //     .attr("fill", "none")
+        //     .attr("stroke-width", 1.5);
     }
 
     // Create the arm object once and reuse it
