@@ -1,21 +1,18 @@
-![screenshot of the website](./src/assets/images/screenshot.png)
+# Movement Science Club Repository
 
-# Eleventy Academic Blog Template
+Welcome to the Movement Science Club of the Biological Learning and Rehabilitaiton group at the Christian Medical College Vellore. This repository  is to share code, data, and other resources of the learning material used for the club activities. 
 
-This is an academic blog template for [11ty](https://11ty.dev/) static site builder.
+## Setup Instructions of the movsci conda environment
 
-It features:
+### 1. Clone the repository
+```bash
+git clone https://github.com/biorehab/movement_science_club.git
+cd movement_science_club
+conda env create -f environment.yml
+conda activate myenv
+```
 
-- Table of contents - [markdown-it-table-of-contents](https://github.com/cmaas/markdown-it-table-of-contents)
-- Citations and bibliography - [markdown-it-biblatex](https://github.com/arothuis/markdown-it-biblatex)
-- Mathjax3 math expressions - [markdown-it-mathjax3](https://github.com/tani/markdown-it-mathjax3#readme)
-- Code syntax highlighting - [markdown-it-highlightjs](https://github.com/valeriangalliat/markdown-it-highlightjs)
-- Color theme switch
-- RSS/Atom feed
-- Optimized styles for printing
-- Minified JS and CSS for small file sizes
+## Content
 
-Configure the application data (like the title of the site and name of the author) in the `src/data` directory files.
-The bibliography is managed in `assets/bibliography.bib`.
-Refer to individual packages to see their usage.
-See the [live example here](https://eleventy-academic-template.netlify.app/).
+#### [2025 Mar 12:  Statics of (planar) Three Link Kinematic Chain](statics_kinematic_chain/three-link-arm.html)
+#### [2025 Mar 12:  Statics of (planar) Two Link Kinematic Chain](statics_kinematic_chain/two-link-arm.html)
