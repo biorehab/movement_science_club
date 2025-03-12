@@ -1,0 +1,6 @@
+<h1>{{ title }}</h1>
+<p><strong>Published on:</strong> {{ date | date("MMMM dd, yyyy") }}</p>
+<a href="/">← Back to Home</a>
+<div class="content">
+  {{ content | safe }}
+</div>

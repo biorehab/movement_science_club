@@ -1,15 +1,20 @@
----
-title: Home
-layout: base.njk
----
-
-<div class="main-content">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/main.css">
+    <title>Home</title>
+</head>
+<body>
+    <main>
+        <div class="main-content">
   <h1 class="title">Movement Science Club</h1>
   <!-- A thin horizontal rile -->
   <hr>
   <p>Welcome to the resource page of the Movement Science Club of the Department of Bioengineering at the Christian Medical College Vellore, India.</p>
   <p>The club's repository contains various blogposts, resource links, and code that related to the different activities of the club.</p>
-
   <!-- Blogposts -->
   <h2 class="subtitle1">Blog Posts</h2>
   <table class="blog-table">
@@ -20,12 +25,13 @@ layout: base.njk
       </tr>
     </thead> -->
     <tbody>
-      {% for post in collections.blog %}
-      <tr>
-        <td>{{ post.date | date: "MMMM dd, yyyy" }}</td>
-        <td><a href="{{ post.url }}">{{ post.data.title }}</a></td>
-      </tr>
-      {% endfor %}
-    </tbody>
+<p><tr>
+<td>March 10, 2025</td>
+<td><a href="/posts/2025-03-10-planar-arm-kinematics/">Kinematics of a Planar Arm</a></td>
+</tr></p>
+<p></tbody></p>
   </table>
 </div>
+    </main>
+</body>
+</html>

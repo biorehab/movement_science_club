@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&display=swap');
+
+body {
+    font-family: 'Comfortaa', sans-serif;
+}
+
+.main-content {
+    width: 60%;  /* Leaves 20% margins on each side */
+    margin: 0 auto; /* Centers the div horizontally */
+    padding: 0rem; /* Adds some padding */
+}
+
+.title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: rgb(200, 0, 0);
+    text-align: center; /* Centers the title */
+}
+
+.subtitle1 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: rgb(200, 0, 0);
+}
+
+p {
+    text-align: justify; /* Justifies paragraph text */
+    color: rgb(100, 100, 100)
+}
+
+/* A think horizontal rule */
+hr {
+    border: 0;
+    height: 1px;
+    background: rgb(0, 0, 0);
+    margin: 0 0;
+}
+
+/* Ensure the table fits within the main content */
+.blog-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.9rem; /* Make it slightly compact */
+}
+
+/* Table headers */
+.blog-table th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+    padding: 8px;
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+}
+
+/* Table cells */
+.blog-table td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Add hover effect to rows */
+.blog-table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* Styling for links in the table */
+.blog-table a {
+    text-decoration: none;
+    color: rgb(200, 0, 0);
+    font-weight: 500;
+}
+
+.blog-table a:hover {
+    text-decoration: underline;
+}
+
+.blog-post {
+    width: 60%;
+    margin: 0 auto;
+}
+
+.post-title {
+    font-size: 2rem;
+    text-align: center;
+    font-weight: 700;
+    color: rgb(200, 0, 0);
+}
+
+.post-meta {
+    text-align: center;
+    color: rgb(100, 100, 100);
+    font-style: italic;
+}
+
+.post-content {
+    text-align: justify;
+    color: rgb(50, 50, 50);
+}
+
+.back-button {
+    display: block;
+    text-align: center;
+    color: rgb(0, 0, 200);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.back-button:hover {
+    text-decoration: underline;
+}
