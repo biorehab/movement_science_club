@@ -1,11 +1,4 @@
 ---
-<<<<<<< HEAD
-title: Home
-layout: base.njk
----
-
-Hello, Eleventy! Welcome to my new blog.
-=======
 layout: "post.njk"
 title: "Welcome to Academic Blog Template"
 description: "Eleventy academic blog template"
@@ -23,4 +16,3 @@ Who would need this? People who work in academic or educational fields
 and want to make their work available on the web.
 
 [bibliography]
->>>>>>> academic-template/main
