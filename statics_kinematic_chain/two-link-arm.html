@@ -181,6 +181,8 @@
     const width = +svgmain.attr("width");
     const height = +svgmain.attr("height");
     const origin = {x: width/2, y: 3 * height/4};
+    const EPFORCECOLOR = "black";
+    const COMPCOLORS = ["magenta", "brown"]
 
     // Update slider values
     document.querySelectorAll('input[type="range"]').forEach(input => {
@@ -265,33 +267,39 @@
         }
 
         link1FreeBodyForceMoments(torque) {
-            console.log((this.angles[0]) * (180 / Math.PI), (this.angles[0] + 0.5 * Math.PI) * (180 / Math.PI));
-            console.log([-math.cos(this.angles[0] + 0.5 * Math.PI),
-            -math.sin(this.angles[0] + 0.5 * Math.PI)])
+            // End point force.
+            const epforce = this.forwardStatics(torque);
             return {
                 proximal: {
+                    angle: this.angles[0],
                     position: this.#armpos[0],
-                    forces: [
-                        // Force due to torque at joint 1
-                        [-(torque[0] / this.lengths[0]) * math.cos(this.angles[0] + 0.5 * Math.PI),
-                         -(torque[0] / this.lengths[0]) * math.sin(this.angles[0] + 0.5 * Math.PI)],
-                        // Force due to torque at joint 2
-                        [-(torque[1] / this.lengths[1]) * math.cos(math.sum(this.angles) - 0.5 * Math.PI),
-                         -(torque[1] / this.lengths[1]) * math.sin(math.sum(this.angles) - 0.5 * Math.PI)],
-                    ],
-                    torques: [torque[0]]
+                    forces: [[-epforce[0], -epforce[1]]],
+                    torque: torque[0]
                 },
                 distal: {
+                    angle: this.angles[0] + Math.PI,
                     position: this.#armpos[1],
-                    forces: [
-                        // Force due to torque at joint 1
-                        [(torque[0] / this.lengths[0]) * math.cos(this.angles[0] + 0.5 * Math.PI),
-                         (torque[0] / this.lengths[0]) * math.sin(this.angles[0] + 0.5 * Math.PI)],
-                        // Force due to torque at joint 2
-                        [(torque[1] / this.lengths[1]) * math.cos(math.sum(this.angles) - 0.5 * Math.PI),
-                         (torque[1] / this.lengths[1]) * math.sin(math.sum(this.angles) - 0.5 * Math.PI)],
-                    ],
-                    torques: [-torque[1]]
+                    forces: [epforce],
+                    torque: -torque[1]
+                }
+            }
+        }
+
+        link2FreeBodyForceMoments(torque) {
+            // End point force.
+            const epforce = this.forwardStatics(torque);
+            return {
+                proximal: {
+                    angle: math.sum(this.angles),
+                    position: this.#armpos[1],
+                    forces: [[-epforce[0], -epforce[1]]],
+                    torque: torque[1]
+                },
+                distal: {
+                    angle: math.sum(this.angles) + Math.PI,
+                    position: this.#armpos[2],
+                    forces: [epforce],
+                    torque: 0
                 }
             }
         }
@@ -387,6 +395,7 @@
 
         // Free body diagram for link1
         visualizeFBDLink1(arm.link1FreeBodyForceMoments(torque));
+        visualizeFBDLink2(arm.link2FreeBodyForceMoments(torque));
     }
 
     // Full arm visualization
@@ -428,82 +437,22 @@
         // Draw the torque arcs around joints.
         const cusumangles = cummulativeSum(angles);
         const torqArcAngles = cusumangles.map((angle, i) => getJoinTorqueArcInfo(angle, torque[i]));
-        const compcolors = ["black", "violet"]
         torqArcAngles.forEach((angles, i) => {
             const arcPath = describeArc(armpos[i][0], armpos[i][1], 20, angles[0], angles[1]);
             svgmain.append("path")
                 .attr("d", arcPath)
-                .attr("stroke", compcolors[i])
+                .attr("stroke", COMPCOLORS[i])
                 .attr("fill", "none")
                 .attr("stroke-width", 1.5);
         });
 
         // Endpoint force.
         if (epforce) {
-            // Draw an arrow to represent the force.
-            const forceEnd = [armpos[2][0] - epforce[0] * lengthToPixelScale * 0.025,
-                              armpos[2][1] + epforce[1] * lengthToPixelScale * 0.025];
-            // Don't draw the arrow if the force is too small
-            if (math.norm(epforce) > 0.05) {
-                // Define the arrow marker
-                svgmain.append("defs").append("marker")
-                    .attr("id", "arrow")
-                    .attr("viewBox", "0 0 10 10")
-                    .attr("refX", 9)
-                    .attr("refY", 5)
-                    .attr("markerWidth", 6)
-                    .attr("markerHeight", 6)
-                    .attr("orient", "auto-start-reverse")
-                    .append("path")
-                    .attr("d", "M 0 0 L 10 5 L 0 10 z")
-                    .attr("fill", "red")
-                    .attr("stroke", "red");
-
-                // Draw the line with the arrow
-                svgmain.append("line")
-                    .attr("x1", armpos[2][0])
-                    .attr("y1", armpos[2][1])
-                    .attr("x2", forceEnd[0])
-                    .attr("y2", forceEnd[1])
-                    .attr("fill", "red")
-                    .attr("stroke", "red")
-                    .attr("marker-end", "url(#arrow)")
-                    .attr("stroke-width", 1.5);
-            }
-
-            // Let's draw the force components with thinner and lighter arrows.
-            // Do the above computation for all components.
-            const _fcomps = epforcecomps.map((fcomp) => [
-                armpos[2][0] - fcomp[0] * lengthToPixelScale * 0.025,
-                armpos[2][1] + fcomp[1] * lengthToPixelScale * 0.025
-            ]);
-            _fcomps.forEach((_fc, i) => {
-                if (math.norm(epforce) > 0.05 && math.norm(_fc) > 0.05) {
-                    // Define the arrow marker
-                    svgmain.append("defs").append("marker")
-                        .attr("id", "arrow")
-                        .attr("viewBox", "0 0 10 10")
-                        .attr("refX", 9)
-                        .attr("refY", 5)
-                        .attr("markerWidth", 6)
-                        .attr("markerHeight", 6)
-                        .attr("orient", "auto-start-reverse")
-                        .append("path")
-                        .attr("d", "M 0 0 L 10 5 L 0 10 z")
-                        .attr("fill", compcolors[i])
-                        .attr("stroke", compcolors[i]);
-
-                    // Draw the line with the arrow
-                    svgmain.append("line")
-                        .attr("x1", armpos[2][0])
-                        .attr("y1", armpos[2][1])
-                        .attr("x2", _fc[0])
-                        .attr("y2", _fc[1])
-                        .attr("fill", compcolors[i])
-                        .attr("stroke", compcolors[i])
-                        .attr("marker-end", "url(#arrow)")
-                        .attr("stroke-width", 1);
-                }
+            // Main EP force arrow.
+            plotForceArrow(svgmain, armpos[2], epforce, EPFORCECOLOR, 1.0);
+            // EP force components.
+            epforcecomps.forEach((_epfc, i) => {
+                plotForceArrow(svgmain, armpos[2], _epfc, COMPCOLORS[i], 1.0);
             });
         }
     }
@@ -513,13 +462,11 @@
         svglink1.selectAll("line").remove();
         svglink1.selectAll("circle").remove();
         svglink1.selectAll("path").remove();
-        console.log(linkdetails);
 
         // Map arm positions to x and y coordinates
         const width = +svglink1.attr("width");
         const height = +svglink1.attr("height");
         const origin = {x: width/2, y: height/2};
-        console.log(origin);
         const midlinkpos = [
             (linkdetails.distal.position[0] - linkdetails.proximal.position[0]) / 2,
             (linkdetails.distal.position[1] - linkdetails.proximal.position[1]) / 2
@@ -531,9 +478,8 @@
         const _lpshiftedpos = mapPositionsToCoordinates(
             [_proxshifted, _distshifted],
             origin,
-            scale=250
+            scale=300
         );
-        console.log(_lpshiftedpos)
         // Draw the link with the correct orientation
         svglink1.append("line")
             .attr("x1", _lpshiftedpos[0][0])
@@ -553,69 +499,92 @@
         });
 
         // Draw the force due to the promimal joint torque
-        // Don't draw the arrow if the force is too small
-        var _forceEnd = [_lpshiftedpos[0][0] - linkdetails.proximal.forces[0][0] * lengthToPixelScale * 0.025,
-                         _lpshiftedpos[0][1] + linkdetails.proximal.forces[0][1] * lengthToPixelScale * 0.025,];
-        console.log(_forceEnd);
-        if (math.norm(linkdetails.proximal.forces[0]) > 0.05) {
-            // Define the arrow marker
-            svglink1.append("defs").append("marker")
-                .attr("id", "arrow")
-                .attr("viewBox", "0 0 10 10")
-                .attr("refX", 9)
-                .attr("refY", 5)
-                .attr("markerWidth", 6)
-                .attr("markerHeight", 6)
-                .attr("orient", "auto-start-reverse")
-                .append("path")
-                .attr("d", "M 0 0 L 10 5 L 0 10 z")
-                .attr("fill", "red")
-                .attr("stroke", "red");
+        plotForceArrow(svglink1, _lpshiftedpos[0], linkdetails.proximal.forces[0], EPFORCECOLOR, 1.0);
+        // Draw the force due to the distal joint torque
+        plotForceArrow(svglink1, _lpshiftedpos[1], linkdetails.distal.forces[0], EPFORCECOLOR, 1.0);
 
-            // Draw the line with the arrow
-            svglink1.append("line")
-                .attr("x1", _lpshiftedpos[0][0])
-                .attr("y1", _lpshiftedpos[0][1])
-                .attr("x2", _forceEnd[0])
-                .attr("y2", _forceEnd[1])
-                .attr("fill", "red")
-                .attr("stroke", "red")
-                .attr("marker-end", "url(#arrow)")
-                .attr("stroke-width", 1.0);
-        }
-        // Don't draw the arrow if the force is too small
-        _forceEnd = [_lpshiftedpos[0][0] - linkdetails.proximal.forces[1][0] * lengthToPixelScale * 0.025,
-                     _lpshiftedpos[0][1] + linkdetails.proximal.forces[1][1] * lengthToPixelScale * 0.025,];
-        console.log(_forceEnd);
-        plotForceArrow(svglink1, _lpshiftedpos[0], linkdetails.proximal.forces[1], "brown", 1.0);
-    //     if (math.norm(linkdetails.proximal.forces[1]) > 0.05) {
-    //         // Define the arrow marker
-    //         svglink1.append("defs").append("marker")
-    //             .attr("id", "arrow")
-    //             .attr("viewBox", "0 0 10 10")
-    //             .attr("refX", 9)
-    //             .attr("refY", 5)
-    //             .attr("markerWidth", 6)
-    //             .attr("markerHeight", 6)
-    //             .attr("orient", "auto-start-reverse")
-    //             .append("path")
-    //             .attr("d", "M 0 0 L 10 5 L 0 10 z")
-    //             .attr("fill", "brown")
-    //             .attr("stroke", "brown");
+        // Draw the torque arcs around joints.
+        // Proximal joint
+        var _torqarc = getJoinTorqueArcInfo(linkdetails.proximal.angle, linkdetails.proximal.torque);
+        var arcPath = describeArc(_lpshiftedpos[0][0], _lpshiftedpos[0][1], 20, _torqarc[0], _torqarc[1]);
+        svglink1.append("path")
+            .attr("d", arcPath)
+            .attr("stroke", COMPCOLORS[0])
+            .attr("fill", "none")
+            .attr("stroke-width", 1.5);
+        // Distal joint
+        _torqarc = getJoinTorqueArcInfo(linkdetails.distal.angle, linkdetails.distal.torque);
+        arcPath = describeArc(_lpshiftedpos[1][0], _lpshiftedpos[1][1], 20, _torqarc[0], _torqarc[1]);
+        svglink1.append("path")
+            .attr("d", arcPath)
+            .attr("stroke", COMPCOLORS[1])
+            .attr("fill", "none")
+            .attr("stroke-width", 1.5);
+    }
 
-    //         // Draw the line with the arrow
-    //         svglink1.append("line")
-    //             .attr("x1", _lpshiftedpos[0][0])
-    //             .attr("y1", _lpshiftedpos[0][1])
-    //             .attr("x2", _forceEnd[0])
-    //             .attr("y2", _forceEnd[1])
-    //             .attr("fill", "brown")
-    //             .attr("stroke", "brown")
-    //             .attr("marker-end", "url(#arrow)")
-    //             .attr("stroke-width", 1.0);
-    //     }
-    //     // Draw the force due to the distal joint torque
+    // Visualize the free body diagram for link2.
+    function visualizeFBDLink2(linkdetails) {
+        svglink2.selectAll("line").remove();
+        svglink2.selectAll("circle").remove();
+        svglink2.selectAll("path").remove();
 
+        // Map arm positions to x and y coordinates
+        const width = +svglink2.attr("width");
+        const height = +svglink2.attr("height");
+        const origin = {x: width/2, y: height/2};
+        const midlinkpos = [
+            (linkdetails.distal.position[0] - linkdetails.proximal.position[0]) / 2,
+            (linkdetails.distal.position[1] - linkdetails.proximal.position[1]) / 2
+        ];
+        const _proxshifted = [- midlinkpos[0], - midlinkpos[1]];
+        const _distshifted = [linkdetails.distal.position[0] - linkdetails.proximal.position[0] - midlinkpos[0],
+                              linkdetails.distal.position[1] - linkdetails.proximal.position[1]  - midlinkpos[1]];
+        const _lpshiftedpos = mapPositionsToCoordinates(
+            [_proxshifted, _distshifted],
+            origin,
+            scale=300
+        );
+        console.log(_lpshiftedpos);
+        // Draw the link with the correct orientation
+        svglink2.append("line")
+            .attr("x1", _lpshiftedpos[0][0])
+            .attr("y1", _lpshiftedpos[0][1])
+            .attr("x2", _lpshiftedpos[1][0])
+            .attr("y2", _lpshiftedpos[1][1])
+            .attr("stroke", "#8888ff")
+            .attr("stroke-width", 3);
+        // Draw joints
+        _lpshiftedpos.slice(0, 1).forEach(pos => {
+            svglink2.append("circle")
+                .attr("cx", pos[0])
+                .attr("cy", pos[1])
+                .attr("r", 3)
+                .attr("stroke", "#8888ff")
+                .attr("fill", "#ffffff");
+        });
+
+        // Draw the force due to the promimal joint torque
+        plotForceArrow(svglink2, _lpshiftedpos[0], linkdetails.proximal.forces[0], EPFORCECOLOR, 1.0);
+        // Draw the force due to the distal joint torque
+        plotForceArrow(svglink2, _lpshiftedpos[1], linkdetails.distal.forces[0], EPFORCECOLOR, 1.0);
+
+        // Draw the torque arcs around joints.
+        // Proximal joint
+        var _torqarc = getJoinTorqueArcInfo(linkdetails.proximal.angle, linkdetails.proximal.torque);
+        var arcPath = describeArc(_lpshiftedpos[0][0], _lpshiftedpos[0][1], 20, _torqarc[0], _torqarc[1]);
+        svglink2.append("path")
+            .attr("d", arcPath)
+            .attr("stroke", COMPCOLORS[1])
+            .attr("fill", "none")
+            .attr("stroke-width", 1.5);
+        // Distal joint
+        _torqarc = getJoinTorqueArcInfo(linkdetails.distal.angle, linkdetails.distal.torque);
+        arcPath = describeArc(_lpshiftedpos[1][0], _lpshiftedpos[1][1], 20, _torqarc[0], _torqarc[1]);
+        svglink2.append("path")
+            .attr("d", arcPath)
+            .attr("stroke", COMPCOLORS[1])
+            .attr("fill", "none")
+            .attr("stroke-width", 1.5);
     }
 
     // General arrow plotting function.
