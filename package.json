@@ -1,0 +1,23 @@
+{
+  "name": "movement_science_club",
+  "version": "1.0.0",
+  "description": "Welcome to the Movement Science Club of the Biological Learning and Rehabilitaiton group at the Christian Medical College Vellore. This repository  is to share code, data, and other resources of the learning material used for the club activities.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/biorehab/movement_science_club.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/biorehab/movement_science_club/issues"
+  },
+  "homepage": "https://github.com/biorehab/movement_science_club#readme",
+  "devDependencies": {
+    "@11ty/eleventy": "^3.0.0"
+  }
+}
