@@ -1,23 +1,18 @@
 {
-  "name": "movement_science_club",
-  "version": "1.0.0",
-  "description": "Welcome to the Movement Science Club of the Biological Learning and Rehabilitaiton group at the Christian Medical College Vellore. This repository  is to share code, data, and other resources of the learning material used for the club activities.",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "eleventy --serve",
+    "build": "eleventy"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/biorehab/movement_science_club.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/biorehab/movement_science_club/issues"
-  },
-  "homepage": "https://github.com/biorehab/movement_science_club#readme",
   "devDependencies": {
-    "@11ty/eleventy": "^3.0.0"
+    "@11ty/eleventy": "^3.0.0-alpha.13",
+    "@11ty/eleventy-navigation": "^0.3.5",
+    "@11ty/eleventy-plugin-rss": "^2.0.1",
+    "@arothuis/markdown-it-biblatex": "^2.0.1",
+    "clean-css": "^5.3.3",
+    "markdown-it-anchor": "^9.0.1",
+    "markdown-it-highlightjs": "^4.1.0",
+    "markdown-it-mathjax3": "^4.3.2",
+    "markdown-it-table-of-contents": "^0.6.0",
+    "terser": "^5.31.1"
   }
 }
