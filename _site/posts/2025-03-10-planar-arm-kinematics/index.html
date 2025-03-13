@@ -55,6 +55,10 @@
     function degreesToRadians(degreesArray) {
         return degreesArray.map(deg => deg * Math.PI / 180);
     }
+    
+    function radiansToDegrees(radiansArray) {
+        return radiansArray.map(rad => rad * 180 / Math.PI);
+    }
 
     function cummulativeSum(array) {
         return array.reduce((acc, curr) => {
@@ -62,7 +66,6 @@
             return acc;
         }, [0]).slice(1);
     }
-
 
     function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
         const angleInRadians = angleInDegrees;
@@ -81,6 +84,14 @@
             M ${start.x} ${start.y}
             A ${radius} ${radius} 0 ${largeArcFlag} ${sweetDir} ${end.x} ${end.y}
         `;
+    }
+
+    function polToCart(r, theta) {
+        return { x: r * Math.cos(theta), y: r * Math.sin(theta) };
+    }
+
+    function cartToPol(x, y) {
+        return { r: Math.hypot(x, y), theta: Math.atan2(y, x) };
     }
 
     // Three link arm class.
@@ -143,7 +154,212 @@
         }
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
+    // Four link arm class
+    class FourLinkArm {
+        #jacobian = math.zeros(4, 4);
+
+        constructor(lengths, angles) {
+            this.lengths = lengths;
+            this.angles = angles;
+            this.#updateJacobian();
+        }
+
+        setAngles(newAngles) {
+            this.angles = newAngles;
+            this.#updateJacobian();
+        }
+
+        setLengths(newLengths) {
+            this.lengths = newLengths;
+            this.#updateJacobian();
+        }
+
+        #updateJacobian() {
+            const _sterms = cummulativeSum(this.angles).map(angle => Math.sin(angle));
+            const _cterms = cummulativeSum(this.angles).map(angle => Math.cos(angle));
+            this.#jacobian.set([0, 0], -this.lengths[0] * _sterms[0] - this.lengths[1] * _sterms[1] - this.lengths[2] * _sterms[2] - this.lengths[3] * _sterms[3]);
+            this.#jacobian.set([0, 1], -this.lengths[1] * _sterms[1] - this.lengths[2] * _sterms[2] - this.lengths[3] * _sterms[3]);
+            this.#jacobian.set([0, 2], -this.lengths[2] * _sterms[2] - this.lengths[3] * _sterms[3]);
+            this.#jacobian.set([0, 3], -this.lengths[3] * _sterms[3]);
+            this.#jacobian.set([1, 0], this.lengths[0] * _cterms[0] + this.lengths[1] * _cterms[1] + this.lengths[2] * _cterms[2] + this.lengths[3] * _cterms[3]);
+            this.#jacobian.set([1, 1], this.lengths[1] * _cterms[1] + this.lengths[2] * _cterms[2] + this.lengths[3] * _cterms[3]);
+            this.#jacobian.set([1, 2], this.lengths[2] * _cterms[2] + this.lengths[3] * _cterms[3]);
+            this.#jacobian.set([1, 3], this.lengths[3] * _cterms[3]);
+            this.#jacobian.set([2, 0], 1);
+            this.#jacobian.set([2, 1], 1);
+            this.#jacobian.set([2, 2], 1);
+            this.#jacobian.set([2, 3], 1);
+        }
+
+        getJacobian() {
+            return this.#jacobian;
+        }
+
+        getArmPositions() {
+            const cusumtheta = cummulativeSum(this.angles);
+            const x1 = 0, y1 = 0;
+            const x2 = this.lengths[0] * Math.cos(cusumtheta[0]);
+            const y2 = this.lengths[0] * Math.sin(cusumtheta[0]);
+            const x3 = x2 + this.lengths[1] * Math.cos(cusumtheta[1]);
+            const y3 = y2 + this.lengths[1] * Math.sin(cusumtheta[1]);
+            const x4 = x3 + this.lengths[2] * Math.cos(cusumtheta[2]);
+            const y4 = y3 + this.lengths[2] * Math.sin(cusumtheta[2]);
+            const x5 = x4 + this.lengths[3] * Math.cos(cusumtheta[3]);
+            const y5 = y4 + this.lengths[3] * Math.sin(cusumtheta[3]);
+            return [[x1, y1], [x2, y2], [x3, y3], [x4, y4], [x5, y5]];
+        }
+
+        getEndpointAngle() {
+            return math.sum(this.angles);
+        }
+
+        forwardStatics(torque) {
+            try {
+                const pinvJ = math.pinv(math.transpose(this.getJacobian()));
+                return math.multiply(pinvJ, math.reshape(torque, [-1, 1])).toArray().flat();
+            } catch (error) {
+                return null;
+            }
+        }
+    }
+
+    // Button callbacks.
+    // Generate a random pose
+    function generateRandomPose() {
+        const randomAngles = [
+            Math.random() * Math.PI,
+            Math.random() * Math.PI * 0.75,
+            Math.random() * Math.PI * 0.75,
+            Math.random() * Math.PI * 0.5,
+        ];
+        arm4Link.setAngles(randomAngles);
+        draw4LinkArm(arm4Link);
+    }
+
+    // Find other solutions (inverse kinematics)
+    function findOtherIKSolutions() {
+        // Get the endpoint positi
+        const j4Pos = arm4Link.getArmPositions()[3];
+        let _tempos = mapPositionsToCoordinates([j4Pos], arm4LinkParams.origin);
+        // svg4Link.append("circle")
+        //         .attr("cx", `${_tempos[0][0]}`)
+        //         .attr("cy", `${_tempos[0][1]}`)
+        //         .attr("r", 5)
+        //         .attr("stroke", "black")
+        //         .attr("stroke-width", "1")
+        //         .attr("fill", "black");
+        svg4Link.append("circle")
+                .attr("cx", `${_tempos[0][0]}`)
+                .attr("cy", `${_tempos[0][1]}`)
+                .attr("r", `${arm4Link.lengths[1]}`)
+                .attr("stroke", "black")
+                .attr("stroke-width", "1")
+                .attr("fill", "none");
+        _tempos = mapPositionsToCoordinates([[0, 0]], arm4LinkParams.origin);
+        svg4Link.append("circle")
+                .attr("cx", `${_tempos[0][0]}`)
+                .attr("cy", `${_tempos[0][1]}`)
+                .attr("r", `${arm4Link.lengths[0] + arm4Link.lengths[1]}`)
+                .attr("stroke", "black")
+                .attr("stroke-width", "1")
+                .attr("fill", "none");
+        // Find the intersection of the circle centered at j4Pos with radius l3 
+        // and the circle centered at j1 with radius l1 + l2.
+        const intersections = findCircleIntersections(0, 0, arm4Link.lengths[0] + arm4Link.lengths[1],
+                                                      j4Pos[0], j4Pos[1], arm4Link.lengths[2]);
+        // Check if the intersection is null.
+        if (intersections == null) {
+            console.log("No intersection found");
+        }
+        _tempos = mapPositionsToCoordinates(intersections, arm4LinkParams.origin);
+        svg4Link.append("circle")
+                .attr("cx", `${_tempos[0][0]}`)
+                .attr("cy", `${_tempos[0][1]}`)
+                .attr("r", "2")
+                .attr("stroke", "black")
+                .attr("stroke-width", "1")
+                .attr("fill", "black");
+        svg4Link.append("circle")
+                .attr("cx", `${_tempos[1][0]}`)
+                .attr("cy", `${_tempos[1][1]}`)
+                .attr("r", "2")
+                .attr("stroke", "black")
+                .attr("stroke-width", "1")
+                .attr("fill", "black");
+        // Find the angles corresponding to the intersection points.
+        const interAngles = intersections.map(intpos => Math.atan2(intpos[1] - j4Pos[1], intpos[0] - j4Pos[0]));
+        // Choose the angle of the third joint to be a number between the intersection angles.
+        const j3Angle = interAngles.length > 1 ? interAngles[0] + Math.random() * (interAngles[1] - interAngles[0]) : interAngles[0];
+        // Find the position on the arc.
+        const j3Pos = [j4Pos[0] + arm4Link.lengths[2] * Math.cos(j3Angle),
+                       j4Pos[1] + arm4Link.lengths[2] * Math.sin(j3Angle)];
+        _tempos = mapPositionsToCoordinates([j3Pos], arm4LinkParams.origin);
+        svg4Link.append("circle")
+                .attr("cx", `${_tempos[0][0]}`)
+                .attr("cy", `${_tempos[0][1]}`)
+                .attr("r", "2")
+                .attr("stroke", "black")
+                .attr("stroke-width", "1")
+                .attr("fill", "black");
+        _tempos = mapPositionsToCoordinates([j3Pos], arm4LinkParams.origin);
+        // Find intersection of the circle centered at j3Pos with radius l2 and the circle centered at j1 with radius l1.
+        let intersections2 = findCircleIntersections(0, 0, arm4Link.lengths[0],
+                                                     j3Pos[0], j3Pos[1], arm4Link.lengths[1]);
+        // Find the joint1 and joint2 angles corresponding to the intersection points.
+        const j1Angles = intersections2.map(intpos => Math.atan2(intpos[1], intpos[0]));
+        const phiAngles = intersections2.map(intpos => Math.PI + Math.atan2(intpos[1] - j3Pos[1], intpos[0] - j3Pos[0]));
+        console.log(radiansToDegrees(j1Angles), radiansToDegrees(phiAngles), radiansToDegrees([Math.PI + j3Angle]));
+        // We want the point with a positive elbow angle.
+        let newAngles = [0, 0, 0, 0];
+        if (j1Angles.length == 1) {
+            newAngles[0] = j1Angles[0];
+            newAngles[1] = phiAngles[0] - j1Angles[0];
+        } else {
+            if (phiAngles[0] - j1Angles[0] > 0) {
+                newAngles[0] = j1Angles[0];
+                newAngles[1] = phiAngles[0] - j1Angles[0];
+            } else {
+                newAngles[0] = j1Angles[1];
+                newAngles[1] = phiAngles[1] - j1Angles[1];
+            }
+        }
+        // Update angles 3 and 4.
+        newAngles[2] = Math.PI + j3Angle - newAngles[0] - newAngles[1];
+        newAngles[3] = arm4Link.getEndpointAngle() - newAngles[0] - newAngles[1] - newAngles[2];
+        console.log(radiansToDegrees(newAngles));
+        // Update angles and draw
+        arm4Link.setAngles(newAngles);
+        draw4LinkArm(arm4Link);
+    }
+
+    function findCircleIntersections(x1, y1, r1, x2, y2, r2) {
+        const d = Math.hypot(x2 - x1, y2 - y1); // Distance between centers
+
+        // No solutions if the circles do not intersect or one circle is inside the other
+        if (d > r1 + r2 || d < Math.abs(r1 - r2)) {
+            return null;
+        }
+
+        // Find the midpoint of the intersection line
+        const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+        const h = Math.sqrt(r1 * r1 - a * a);
+        
+        // Base point of the perpendicular line
+        const x0 = x1 + a * (x2 - x1) / d;
+        const y0 = y1 + a * (y2 - y1) / d;
+
+        // Intersection points
+        const rx = -(y2 - y1) * (h / d);
+        const ry = (x2 - x1) * (h / d);
+
+        const intersection1 = [x0 + rx, y0 + ry];
+        const intersection2 = [x0 - rx, y0 - ry];
+
+        return d === r1 + r2 || d === Math.abs(r1 - r2) ? [intersection1] : [intersection1, intersection2];
+    }
+
+    // Figure 1: 3 link arm plotting function.
+    function draw3LinkArm() {
         const width = 300, height = 300;
         const origin = {x: 50, y: 250};
         const viewpad = 25;
@@ -155,11 +371,11 @@
         );
 
         const svg = d3.select("#svg-container")
-            .append("svg")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("viewBox", `-${viewpad} -${viewpad} ${width + 50} ${height + 50}`)
-            .attr("preserveAspectRatio", "xMidYMid meet");
+                      .append("svg")
+                      .attr("width", width)
+                      .attr("height", height)
+                      .attr("viewBox", `-${viewpad} -${viewpad} ${width + 50} ${height + 50}`)
+                      .attr("preserveAspectRatio", "xMidYMid meet");
 
         // Plot the x and y axes
         svg.append("line")
@@ -290,7 +506,98 @@
             .attr("fill", "#080")
             .attr("text-anchor", "middle")
             .text(`ϕ`);
+    }
+
+    // Draw the four link arm.
+    function draw4LinkArm(arm) {
+        svg4Link.selectAll("*").remove(); // Clear previous drawing
+
+        // Plot the x and y axes
+        svg4Link.append("line")
+            .attr("x1", 0).attr("y1", arm4LinkParams.origin.y)
+            .attr("x2", arm4LinkParams.width).attr("y2", arm4LinkParams.origin.y)
+            .attr("stroke", "gray")
+            .attr("stroke-width", 0.25);
+        svg4Link.append("line")
+            .attr("x1", arm4LinkParams.origin.x).attr("y1", 0)
+            .attr("x2", arm4LinkParams.origin.x).attr("y2", arm4LinkParams.height)
+            .attr("stroke", "gray")
+            .attr("stroke-width", 0.25);
+
+        // Plot the links
+        const linkpos = mapPositionsToCoordinates(arm.getArmPositions(), arm4LinkParams.origin);
+        for (let i = 0; i < linkpos.length - 1; i++) {
+            svg4Link.append("line")
+                .attr("x1", linkpos[i][0])
+                .attr("y1", linkpos[i][1])
+                .attr("x2", linkpos[i + 1][0])
+                .attr("y2", linkpos[i + 1][1])
+                .attr("stroke", "black")
+                .attr("stroke-width", 2);
+        }
+
+        // Plot the joints.
+        linkpos.slice(0, -1).forEach(pos => {
+            svg4Link.append("circle")
+                    .attr("cx", pos[0])
+                    .attr("cy", pos[1])
+                    .attr("r", 3)
+                    .attr("stroke", "black")
+                    .attr("stroke-width", "1")
+                    .attr("fill", "#ffffff");
+        });
+        // Plot the endpoint.
+        svg4Link.append("circle")
+                .attr("cx", linkpos.at(-1)[0])
+                .attr("cy", linkpos.at(-1)[1])
+                .attr("r", 2)
+                .attr("stroke", "black")
+                .attr("stroke-width", "1")
+                .attr("fill", "black");
+
+        // Display endpoint position and orientation.
+        const _epstr = `x = ${arm.getArmPositions().at(-1)[0].toFixed(2)}, y = ${arm.getArmPositions().at(-1)[1].toFixed(2)}, ϕ = ${((180 / Math.PI) * math.sum(arm.angles)).toFixed(2)}`;
+        svg4Link.append("text")
+                .attr("x", 0)
+                .attr("y", 10)
+                .attr("font-size", "12px")
+                .attr("fill", "#000")
+                .text(_epstr);
+        const jointAnglesString = arm.angles.map((angle, i) => `θ${i + 1} = ${angle.toFixed(2)}°`).join(", ");
+        svg4Link.append("text")
+                .attr("x", 0)
+                .attr("y", 30)
+                .attr("font-size", "12px")
+                .attr("fill", "#000")
+                .text(jointAnglesString);
+    }
+
+    // Draw the the three link figure when the document is loaded.
+    document.addEventListener("DOMContentLoaded", function() {
+        draw3LinkArm();
+        // Initialize the 4link SVG
+        svg4Link = d3.select("#svg-4link-interactive")
+                     .append("svg")
+                     .attr("width", arm4LinkParams.width)
+                     .attr("height", arm4LinkParams.height)
+                     .attr("viewBox", `-${0} -${0} ${arm4LinkParams.width} ${arm4LinkParams.height}`)
+                     .attr("preserveAspectRatio", "xMidYMid meet");
+        draw4LinkArm(arm4Link);
     });
+    
+    // Global variables.
+    const arm4Link = new FourLinkArm(
+        [50, 50, 50, 30], // Initial lengths
+        degreesToRadians([30, 30, 30, 60])
+    );
+    const arm4LinkParams = {
+        width:400,
+        height: 400,
+        origin: null
+    };
+    arm4LinkParams.origin = {x: arm4LinkParams.width / 2,
+                             y: arm4LinkParams.height / 2};
+    let svg4Link = null;
 </script>
 <p>Mastering the mechanics of a planar arm is a necessary step to understanding more complex kinematic chains, such the human upper limb. In this post, we will focus on the kinematics of planar open kinematic chains composed $1$ to $n$ revolute joints.</p>
 <div id="svg-container"></div>
@@ -326,7 +633,7 @@ How can we verify this is true?
 <div id="svg-4link-interactive"></div>
 <div class="button-container">
     <button onclick="generateRandomPose()">Generate Random Pose</button>
-    <button onclick="findOtherSolutions()">Find Other Solutions</button>
+    <button onclick="findOtherIKSolutions()">Find Other Solutions</button>
 </div>
         </div>
       </div>
