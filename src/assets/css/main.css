@@ -5,7 +5,7 @@ body {
 }
 
 .main-content {
-    width: 60%;  /* Leaves 20% margins on each side */
+    width: 50%;  /* Leaves 20% margins on each side */
     margin: 0 auto; /* Centers the div horizontally */
     padding: 0rem; /* Adds some padding */
 }
@@ -109,7 +109,7 @@ hr {
 
 .post-meta {
     text-align: left;
-    color: rgb(100, 100, 100);
+    color: rgb(128, 128, 128);
     font-size:0.75em;
      /* Reduce top margin */
     margin: -1em 0 0 0;
@@ -117,7 +117,10 @@ hr {
 
 .post-content {
     text-align: justify;
-    color: rgb(50, 50, 50);
+    color: rgb(0, 0, 0);
+    font-size: 0.9rem;
+    /* Line spacing */
+    line-height: 1.5;
 }
 
 .back-button {

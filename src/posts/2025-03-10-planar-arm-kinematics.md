@@ -6,4 +6,9 @@ author: "Sivakumar Balasubramanian"
 tags: ["blog"]
 ---
 
-This is the content of my blog post.
+Mastering the mechanics of a planar arm is a necessary step to understanding more complex kinematic chains, such the human upper limb. In this post, we will focus on the kinematics of planar open kinematic chains composed $1$ to $n$ revolute joints.
+
+<!-- <svg width="200" height="200">
+  <circle cx="100" cy="100" r="50" stroke="black" stroke-width="1" fill="#faa" />
+</svg> -->
+

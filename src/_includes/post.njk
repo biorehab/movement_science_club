@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ '/assets/css/main.css' | url }}">
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        }
+      };
+    </script>
+    <script async src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <title>{{ title }}</title>
 </head>
 <body>
@@ -15,11 +26,11 @@
         </header>
         <h2 class="post-title">{{ title }}</h2>
         <p class="post-meta">
-          <strong>Published on:</strong> {{ page.date | date("MMMM dd, yyyy") }}]<br>
+          <strong>Published on:</strong> {{ page.date | date("MMMM dd, yyyy") }}<br>
           <strong>Author:</strong> {{ author }}
         </p>
         <hr>
-        <div class="content">
+        <div class="post-content">
           {{ content | safe }}
         </div>
       </div>
