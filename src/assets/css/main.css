@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap');
+
 
 body {
     font-family: 'Comfortaa', sans-serif;
@@ -116,9 +118,10 @@ hr {
 }
 
 .post-content {
+    font-family: 'Roboto', 'Comfortaa', sans-serif;
     text-align: justify;
     color: rgb(0, 0, 0);
-    font-size: 0.9rem;
+    font-size: 1rem;
     /* Line spacing */
     line-height: 1.5;
 }
@@ -133,4 +136,20 @@ hr {
 
 .back-button:hover {
     text-decoration: underline;
+}
+
+.emphasized {
+    font-weight: 200; /* Make it bold */
+    color: rgb(200, 0, 0); /* Use the red theme color */
+}
+
+.question-box {
+    font-family: 'Comfortaa', sans-serif;
+    font-size: 0.75em;
+    color: rgb(0, 0, 0);
+    background-color: rgba(200, 0, 0, 0.05);
+    padding: 5px;
+    border-left: 5px solid rgb(200, 0, 0);
+    margin: 0px 0; /* Add space above and below */
+    border-radius: 5px; /* Rounded edges */
 }

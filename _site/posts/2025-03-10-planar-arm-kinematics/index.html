@@ -31,11 +31,303 @@
         </p>
         <hr>
         <div class="post-content">
-          <p>Mastering the mechanics of a planar arm is a necessary step to understanding more complex kinematic chains, such the human upper limb. In this post, we will focus on the kinematics of planar open kinematic chains composed $1$ to $n$ revolute joints.</p>
-<!-- <svg width="200" height="200">
-  <circle cx="100" cy="100" r="50" stroke="black" stroke-width="1" fill="#faa" />
-</svg> -->
+          <style>
+  svg {
+    display: block;
+    margin: auto;
+  }
 
+  .button-container {
+    display: flex;           /* Use flexbox for layout */
+    justify-content: center; /* Center-align buttons horizontally */
+    align-items: center;     /* Center-align buttons vertically (if needed) */
+    margin-top: 20px;        /* Add some space above the buttons */
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.1/math.min.js"></script>
+<script>
+    // Some utility functions
+    function mapPositionsToCoordinates(positions, origin) {
+        return positions.map(pos => [origin.x + pos[0],
+                                     origin.y - pos[1]]);
+    }
+
+    function degreesToRadians(degreesArray) {
+        return degreesArray.map(deg => deg * Math.PI / 180);
+    }
+
+    function cummulativeSum(array) {
+        return array.reduce((acc, curr) => {
+            acc.push(acc[acc.length - 1] + curr);
+            return acc;
+        }, [0]).slice(1);
+    }
+
+
+    function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+        const angleInRadians = angleInDegrees;
+        return {
+            x: centerX + (radius * Math.cos(angleInRadians)),
+            y: centerY - (radius * Math.sin(angleInRadians))
+        };
+    }
+
+    function describeArc(x, y, radius, startAngle, endAngle) {
+        const start = polarToCartesian(x, y, radius, startAngle);
+        const end = polarToCartesian(x, y, radius, endAngle);
+        const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+        const sweetDir = endAngle - startAngle >= 0 ? "0" : "1";
+        return `
+            M ${start.x} ${start.y}
+            A ${radius} ${radius} 0 ${largeArcFlag} ${sweetDir} ${end.x} ${end.y}
+        `;
+    }
+
+    // Three link arm class.
+    class ThreeLinkArm {
+        #jacobian = math.zeros(3, 3);
+
+        constructor(lengths, angles) {
+            this.lengths = lengths;
+            this.angles = angles;
+            this.#updateJacobian();
+        }
+    
+        setAngles(newAngles) {
+            this.angles = newAngles;
+            this.#updateJacobian();
+        }
+
+        setLengths(newLengths) {
+            this.lengths = newLengths;
+            this.#updateJacobian();
+        }
+    
+        #updateJacobian() {
+            const _sterms = cummulativeSum(this.angles).map(angle => Math.sin(angle));
+            const _cterms = cummulativeSum(this.angles).map(angle => Math.cos(angle));
+            this.#jacobian.set([0, 0], -this.lengths[0] * _sterms[0] - this.lengths[1] * _sterms[1] - this.lengths[2] * _sterms[2]);
+            this.#jacobian.set([0, 1], -this.lengths[1] * _sterms[1] - this.lengths[2] * _sterms[2]);
+            this.#jacobian.set([0, 2], -this.lengths[2] * _sterms[2]);
+            this.#jacobian.set([1, 0], this.lengths[0] * _cterms[0] + this.lengths[1] * _cterms[1] + this.lengths[2] * _cterms[2]);
+            this.#jacobian.set([1, 1], this.lengths[1] * _cterms[1] + this.lengths[2] * _cterms[2]);
+            this.#jacobian.set([1, 2], this.lengths[2] * _cterms[2]);
+            this.#jacobian.set([2, 0], 1);
+            this.#jacobian.set([2, 1], 1);
+            this.#jacobian.set([2, 2], 1);
+        }
+
+        getJacobian() {
+            return this.#jacobian;
+        }
+
+        getArmPositions() {
+            const cusumtheta = cummulativeSum(this.angles);
+            const x1 = 0, y1 = 0;
+            const x2 = this.lengths[0] * Math.cos(cusumtheta[0]);
+            const y2 = this.lengths[0] * Math.sin(cusumtheta[0]);
+            const x3 = x2 + this.lengths[1] * Math.cos(cusumtheta[1]);
+            const y3 = y2 + this.lengths[1] * Math.sin(cusumtheta[1]);
+            const x4 = x3 + this.lengths[2] * Math.cos(cusumtheta[2]);
+            const y4 = y3 + this.lengths[2] * Math.sin(cusumtheta[2]);
+            return [[x1, y1], [x2, y2], [x3, y3], [x4, y4]];
+        }
+
+        forwardStatics(torque) {
+            try {
+                const pinvJ = math.pinv(math.transpose(this.getJacobian()));
+                return math.multiply(pinvJ, math.reshape(torque, [-1, 1])).toArray().flat();
+            } catch (error) {
+                return null;
+            }
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const width = 300, height = 300;
+        const origin = {x: 50, y: 250};
+        const viewpad = 25;
+
+        // Create the arm object once and reuse it
+        const arm = new ThreeLinkArm(
+            [100, 100, 75], // Initial lengths
+            degreesToRadians([30, 30, 60]) // Initial angles
+        );
+
+        const svg = d3.select("#svg-container")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("viewBox", `-${viewpad} -${viewpad} ${width + 50} ${height + 50}`)
+            .attr("preserveAspectRatio", "xMidYMid meet");
+
+        // Plot the x and y axes
+        svg.append("line")
+           .attr("x1", 0).attr("y1", origin.y)
+           .attr("x2", width).attr("y2", origin.y)
+           .attr("stroke", "gray")
+           .attr("stroke-width", 0.25);
+        svg.append("line")
+           .attr("x1", origin.x).attr("y1", 0)
+           .attr("x2", origin.x).attr("y2", height)
+           .attr("stroke", "gray")
+           .attr("stroke-width", 0.25);
+
+        // Plot the links.
+        const linkpos = mapPositionsToCoordinates(arm.getArmPositions(), origin);
+        for (let i = 0; i < linkpos.length - 1; i++) {
+            let x1 = linkpos[i][0];
+            let y1 = linkpos[i][1];
+            let x2 = linkpos[i + 1][0];
+            let y2 = linkpos[i + 1][1];
+            // Plot the line
+            svg.append("line")
+                .attr("x1", linkpos[i][0])
+                .attr("y1", linkpos[i][1])
+                .attr("x2", linkpos[i+1][0])
+                .attr("y2", linkpos[i+1][1])
+                .attr("stroke", "black")
+                .attr("stroke-width", 2);
+            // Display the link lengths
+            let midx = (x1 + x2) / 2;
+            let midy = (y1 + y2) / 2;
+            let shiftx = (y2 - y1) / arm.lengths[i];
+            let shifty = -(x2 - x1) / arm.lengths[i];
+            let shiftscalex = shiftx > 0 ? -1 : 1;
+            let shiftscaley = shiftx > 0 ? -1 : 1;
+            svg.append("text")
+                .attr("x", midx + shiftscalex * 15 * shiftx)
+                .attr("y", midy + shiftscaley * 15 * shifty)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "14px")
+                .attr("fill", "#00c")
+                .text(`l${i + 1}`);
+        }
+        // Extend links for annotating the joint angles.
+        for (let i = 1; i < linkpos.length; i++) {
+            svg.append("line")
+               .attr("x1", linkpos[i][0])
+               .attr("y1", linkpos[i][1])
+               .attr("x2", linkpos[i][0] + 0.5 * (linkpos[i][0] - linkpos[i - 1][0]))
+               .attr("y2", linkpos[i][1] + 0.5 * (linkpos[i][1] - linkpos[i - 1][1]))
+               .attr("stroke", "gray")
+               .attr("stroke-width", "1")
+               .attr("stroke-dasharray", "2,2");
+        }
+        // Plot the joints.
+        linkpos.slice(0, -1).forEach(pos => {
+            svg.append("circle")
+                .attr("cx", pos[0])
+                .attr("cy", pos[1])
+                .attr("r", 5)
+                .attr("stroke", "black")
+                .attr("stroke-width", "1")
+                .attr("fill", "#ffffff");
+        });
+        // Plot the endpoint.
+        svg.append("circle")
+            .attr("cx", linkpos.at(-1)[0])
+            .attr("cy", linkpos.at(-1)[1])
+            .attr("r", 2)
+            .attr("stroke", "black")
+            .attr("stroke-width", "1")
+            .attr("fill", "black");
+        // Draw the arc for the joint angles.
+        arm.angles.map((_t, i) => {
+            let startAngle = math.sum(arm.angles.slice(0, i));
+            let endAngle = math.sum(arm.angles.slice(0, i + 1));
+            let midAngle = (startAngle + endAngle) / 2;  // Midpoint for label
+            svg.append("path")
+                .attr("d", describeArc(linkpos[i][0], linkpos[i][1], 0.4 * arm.lengths[i], startAngle, endAngle))
+                .attr("stroke", "black")
+                .attr("fill", "none")
+                .attr("stroke-width", 1.0);
+            // Convert midAngle to radians
+            let midAngleRad = midAngle;
+            // Compute text position
+            let textX = linkpos[i][0] + 0.6 * arm.lengths[i] * Math.cos(midAngleRad);
+            let textY = linkpos[i][1] - 0.5 * arm.lengths[i] * Math.sin(midAngleRad);
+            // Append the angle label
+            svg.append("text")
+                .attr("x", textX)
+                .attr("y", textY)
+                .attr("font-size", "14px")
+                .attr("fill", "#c00")
+                .attr("text-anchor", "middle")
+                .text(`θ${i + 1}`);
+        });
+        // Display endpoint text.
+        svg.append("text")
+           .attr("x", linkpos.at(-1)[0] - 25)
+           .attr("y", linkpos.at(-1)[1])
+           .attr("font-size", "18px")
+           .attr("fill", "#080")
+           .attr("text-anchor", "middle")
+           .text(`x, y`);
+        // Plot the endpoint orientation arc and text
+        svg.append("line")
+           .attr("x1", linkpos.at(-1)[0])
+           .attr("y1", linkpos.at(-1)[1])
+           .attr("x2", linkpos.at(-1)[0] + 40)
+           .attr("y2", linkpos.at(-1)[1])
+           .attr("stroke", "gray")
+           .attr("stroke-width", "1")
+           .attr("stroke-dasharray", "2,2");
+        // Angle arc
+        svg.append("path")
+            .attr("d", describeArc(linkpos.at(-1)[0], linkpos.at(-1)[1], 0.25 * arm.lengths.at(-1), 0, math.sum(arm.angles)))
+            .attr("stroke", "black")
+            .attr("fill", "none")
+            .attr("stroke-width", 1.0);
+        // Compute text position
+        let textX = linkpos.at(-1)[0] + 0.4 * arm.lengths.at(-1) * Math.cos(math.sum(arm.angles) / 2);
+        let textY = linkpos.at(-1)[1] - 0.3 * arm.lengths.at(-1) * Math.sin(math.sum(arm.angles) / 2);
+        // Append the angle label
+        svg.append("text")
+            .attr("x", textX)
+            .attr("y", textY)
+            .attr("font-size", "18px")
+            .attr("fill", "#080")
+            .attr("text-anchor", "middle")
+            .text(`ϕ`);
+    });
+</script>
+<p>Mastering the mechanics of a planar arm is a necessary step to understanding more complex kinematic chains, such the human upper limb. In this post, we will focus on the kinematics of planar open kinematic chains composed $1$ to $n$ revolute joints.</p>
+<div id="svg-container"></div>
+<p>The above figure shows a 3 link planar arm with three revolute joints. If we think of this as the human arm, then the first joint at the origin could be thought of as the shoulder, the second joint as the elbow, and the third joint as the wrist. Let the lengths of the links are $l_1$, $l_2$, and $l_3$, and the joint angles $\theta_1$, $\theta_2$, and $\theta_3$. The position of the endpoint (black circle at the tip of the third link) $x, y$ and the orientation of the last link $\phi$ can be computed using the forward kinematics equations,</p>
+<p>$$
+\begin{split}
+x &amp;= l_1 c_1 + l_2 c_{12} + l_3 c_{123} \\
+y &amp;= l_1 s_1 + l_2 s_{12} + l_3 s_{123} \\
+\phi &amp;= \theta_1 + \theta_2 + \theta_3
+\end{split}
+$$</p>
+<p>where, $s_{12\cdots n} = \sin(\theta_1 + \theta_2 + \cdots + \theta_n)$ and $c_{12\cdots n} = \cos(\theta_1 + \theta_2 + \cdots + \theta_n)$.</p>
+<p>The above equations are called the forward kinematics equations, which take us from the known joint angles to the position and orientation of the endpoint. The inverse kinematics equations, on the other hand, take us from the known position and orientation of the endpoint to the joint angles. The inverse kinematics equations are harder to solve, and in general, there may be multiple solutions or no solutions at all.</p>
+<p>The forward kinematics equations can be generalized to $n$ link arm as the following,
+$$
+\begin{split}
+x &amp;= l_1 c_1 + l_2 c_{12} + \cdots + l_n c_{123\cdots n} \\
+y &amp;= l_1 s_1 + l_2 s_{12} + \cdots + l_n s_{123\cdots n} \\
+\phi &amp;= \theta_1 + \theta_2 + \cdots + \theta_n
+\end{split}
+$$</p>
+<p>A rigid body in a plane has $3$ degrees of freedom (DOF), $2$ for position and $1$ for orientation. A $n$ link arm has $n$ rigid bodies each with three degrees of freedom. But these rigid bodies are joined by $n$ revolute joints (one connecting link 1 to the ground and rest between the rigid bodies). Each revolute joint introduces a position constraint, i.e., $2$ constraints. Thus an $n$ link arm has $3n - 2n = n$ degrees of freedom. Thus an $n$-link arm's kinematic configuration can be completely specified by $n$ joint angles or <i>generalized coordinates</i>, i.e. $\theta_1, \theta_2 \cdots \theta_n$.</p>
+<p>When the number of DOF of a planar arm equals $3$, there is a one-to-one mapping between the joint angles and the position and orientation of the endpoint.</p>
+<p class="question-box">
+How can we verify this is true?
+</p>
+<p>But when the number of DOF is more than $3$, there are infinitely many joint angles that will give us the same endpoint position and orientation. We say that the arm is <span class="emphasized">kinematically redundant</span> in this particular case, i.e. $n &gt; 3$.</p>
+<p class="question-box">
+> What happens when $n < 3$?<br>
+> When $n=3$, and we are only interested in the endpoint position. Is this arm kinematically redundant?
+</p>
+<p>The following interactive simulation demonstrates this redundancy.</p>
+<div id="svg-4link-interactive"></div>
+<div class="button-container">
+    <button onclick="generateRandomPose()">Generate Random Pose</button>
+    <button onclick="findOtherSolutions()">Find Other Solutions</button>
+</div>
         </div>
       </div>
     </main>
