@@ -3,7 +3,7 @@ module.exports = function(eleventyConfig) {
   eleventyConfig.addPassthroughCopy("src/assets");
 
   // Define the "posts" collection that will contain all blogposts
-  eleventyConfig.addCollection("posts", function(collectionApi) {
+  eleventyConfig.addCollection("movsciposts", function(collectionApi) {
     return collectionApi.getFilteredByGlob("src/posts/*.md").reverse();
   });
 
@@ -17,7 +17,8 @@ module.exports = function(eleventyConfig) {
     dir: {
       input: "src",
       output: "_site"
-    }
+    },
+    pathPrefix: "/movement_science_club/"
   };
 };
 
