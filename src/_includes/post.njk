@@ -1,6 +1,28 @@
-<h1>{{ title }}</h1>
-<p><strong>Published on:</strong> {{ date | date("MMMM dd, yyyy") }}</p>
-<a href="/">← Back to Home</a>
-<div class="content">
-  {{ content | safe }}
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ '/assets/css/main.css' | url }}">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <main>
+      <div class="main-content">
+        <header>
+          <a class="post-head-link" href="{{ '/' | url }}">← Movement Science Club</a>
+        </header>
+        <h2 class="post-title">{{ title }}</h2>
+        <p class="post-meta">
+          <strong>Published on:</strong> {{ page.date | date("MMMM dd, yyyy") }}]<br>
+          <strong>Author:</strong> {{ author }}
+        </p>
+        <hr>
+        <div class="content">
+          {{ content | safe }}
+        </div>
+      </div>
+    </main>
+</body>
+</html>

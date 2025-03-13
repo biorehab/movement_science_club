@@ -18,7 +18,7 @@ module.exports = function(eleventyConfig) {
       input: "src",
       output: "_site"
     },
-    pathPrefix: "/movement_science_club/"
+    pathPrefix: "/movement_science_club/",
   };
 };
 

@@ -82,17 +82,37 @@ hr {
     margin: 0 auto;
 }
 
+.post-head-link {
+    font-size: 0.8rem;
+    display: inline-block; /* Ensures padding and margins apply properly */
+    background-color: rgb(200, 0, 0); /* Bootstrap-like blue */
+    color: white; /* Text color */
+    padding: 10px 20px; /* Adjust padding as needed */
+    border-radius: 25px; /* Makes the edges rounded */
+    text-decoration: none; /* Remove underline */
+    font-weight: bold; /* Make text bold */
+    text-align: center; /* Center text */
+    transition: background-color 0.3s ease; /* Smooth hover effect */
+}
+
+.post-head-link:hover {
+    background-color: #ffffff; /* Darker blue on hover */
+    color: rgb(200, 0, 0); /* Text color */
+}
+
 .post-title {
-    font-size: 2rem;
-    text-align: center;
+    font-size: 1.5rem;
+    text-align: left;
     font-weight: 700;
     color: rgb(200, 0, 0);
 }
 
 .post-meta {
-    text-align: center;
+    text-align: left;
     color: rgb(100, 100, 100);
-    font-style: italic;
+    font-size:0.75em;
+     /* Reduce top margin */
+    margin: -1em 0 0 0;
 }
 
 .post-content {
