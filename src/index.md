@@ -20,10 +20,10 @@ layout: base.njk
       </tr>
     </thead> -->
     <tbody>
-      {% for movscipost in collections.blog %}
+      {% for post in collections.blog %}
       <tr>
         <td>{{ post.date | date: "MMMM dd, yyyy" }}</td>
-        <td><a href="{{ post.url }}/movement_science_club/">{{ post.data.title }}</a></td>
+        <td><a href="{{ post.url | url }}">{{ post.data.title }}</a></td>
       </tr>
       {% endfor %}
     </tbody>
