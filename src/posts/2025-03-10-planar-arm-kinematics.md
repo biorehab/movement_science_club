@@ -251,21 +251,6 @@ tags: ["blog"]
             // Find the intersection of the circle centered at j4Pos with radius l3 
             // and the circle centered at j1 with radius l1 + l2.
             const intersections = findCircleIntersections(0, 0, arm.lengths[0] + arm.lengths[1], j4Pos[0], j4Pos[1], arm.lengths[2]);
-            _tempos = mapPositionsToCoordinates(intersections, arm4LinkParams.origin);
-            svg4Link.append("circle")
-                    .attr("cx", `${_tempos[0][0]}`)
-                    .attr("cy", `${_tempos[0][1]}`)
-                    .attr("r", "2")
-                    .attr("stroke", "black")
-                    .attr("stroke-width", "1")
-                    .attr("fill", "black");
-            svg4Link.append("circle")
-                    .attr("cx", `${_tempos[1][0]}`)
-                    .attr("cy", `${_tempos[1][1]}`)
-                    .attr("r", "2")
-                    .attr("stroke", "black")
-                    .attr("stroke-width", "1")
-                    .attr("fill", "black");
             // Find the angles corresponding to the intersection points.
             let interAngles = intersections.map(intpos => Math.atan2(intpos[1] - j4Pos[1], intpos[0] - j4Pos[0]));
             // Sort the interAngles
@@ -298,21 +283,6 @@ tags: ["blog"]
         // Get the endpoint position
         const j4Pos = arm4Link.getArmPositions()[3];
         let _tempos = mapPositionsToCoordinates([j4Pos], arm4LinkParams.origin);
-        svg4Link.append("circle")
-                .attr("cx", `${_tempos[0][0]}`)
-                .attr("cy", `${_tempos[0][1]}`)
-                .attr("r", `${arm4Link.lengths[1]}`)
-                .attr("stroke", "black")
-                .attr("stroke-width", "1")
-                .attr("fill", "none");
-        _tempos = mapPositionsToCoordinates([[0, 0]], arm4LinkParams.origin);
-        svg4Link.append("circle")
-                .attr("cx", `${_tempos[0][0]}`)
-                .attr("cy", `${_tempos[0][1]}`)
-                .attr("r", `${arm4Link.lengths[0] + arm4Link.lengths[1]}`)
-                .attr("stroke", "black")
-                .attr("stroke-width", "1")
-                .attr("fill", "none");
         // Relative distance of the third joint.
         const delpos = arm4Link.lengths[0] + arm4Link.lengths[1] - Math.hypot(j4Pos[0], j4Pos[1]);
         let j3 = null;
@@ -323,14 +293,6 @@ tags: ["blog"]
         }
         const j3Pos = j3.pos;
         const j3Angle = j3.angle;
-        _tempos = mapPositionsToCoordinates([j3Pos], arm4LinkParams.origin);
-        svg4Link.append("circle")
-                .attr("cx", `${_tempos[0][0]}`)
-                .attr("cy", `${_tempos[0][1]}`)
-                .attr("r", "2")
-                .attr("stroke", "red")
-                .attr("stroke-width", "1")
-                .attr("fill", "red");
         _tempos = mapPositionsToCoordinates([j3Pos], arm4LinkParams.origin);
 
         // Find intersection of the circle centered at j3Pos with radius l2 and the circle centered at j1 with radius l1.
@@ -601,6 +563,15 @@ tags: ["blog"]
                 .text(jointAnglesString);
     }
 
+    // Automatically number items.
+    function autoNumberItems() {
+        let count = 1; // Start numbering from 1
+        document.querySelectorAll("ol").forEach((ol) => {
+            ol.setAttribute("start", count);
+            count += ol.children.length;
+        });
+    }
+
     // Draw the the three link figure when the document is loaded.
     document.addEventListener("DOMContentLoaded", function() {
         draw3LinkArm();
@@ -612,6 +583,9 @@ tags: ["blog"]
                      .attr("viewBox", `-${0} -${0} ${arm4LinkParams.width} ${arm4LinkParams.height}`)
                      .attr("preserveAspectRatio", "xMidYMid meet");
         draw4LinkArm(arm4Link);
+
+        // Auto number items.
+        autoNumberItems();
     });
     
     // Global variables.
@@ -660,20 +634,26 @@ A rigid body in a plane has $3$ degrees of freedom (DOF), $2$ for position and $
 
 When the number of DOF of a planar arm equals $3$, there is a one-to-one mapping between the joint angles and the position and orientation of the endpoint. 
 
-<p class="question-box">
-How can we verify this is true?
-</p>
+<div class="question-box">
+<ol>
+  <li>How can we verify this is true?</li>
+</ol>
+</div>
 
 But when the number of DOF is more than $3$, there are infinitely many joint angles that will give us the same endpoint position and orientation. We say that the arm is <span class="emphasized">kinematically redundant</span> in this particular case, i.e. $n > 3$.
 
-<p class="question-box">
-> What happens when $n < 3$?<br>
-> When $n=3$, and we are only interested in the endpoint position. Is this arm kinematically redundant?
-</p>
+<div class="question-box">
+<ol>
+  <li>What happens when $n < 3$?</li>
+  <li>When $n=3$, and we are only interested in the endpoint position. Is this arm kinematically redundant?</li>
+</ol>
+</div>
 
-The following interactive simulation demonstrates this redundancy.
+The following interactive simulation demonstrates this redundancy. When you press the "Generate Random Pose" button, the joint angles are randomly generated, and the arm is drawn. When you press the "Find Other Solutions" button, one of the other joint angle configurations that results in the same endpoint position and link 4 orientation is chosen and the arm is updated.
 <div id="svg-4link-interactive"></div>
 <div class="button-container">
     <button onclick="generateRandomPose()">Generate Random Pose</button>
     <button onclick="findOtherIKSolutions()">Find Other Solutions</button>
 </div>
+
+<!-- <h3>Differential Kinematics</h3> -->

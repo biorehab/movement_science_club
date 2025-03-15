@@ -148,7 +148,7 @@ hr {
     font-size: 0.75em;
     color: rgb(0, 0, 0);
     background-color: rgba(200, 0, 0, 0.05);
-    padding: 5px;
+    padding: 1px;
     border-left: 5px solid rgb(200, 0, 0);
     margin: 0px 0; /* Add space above and below */
     border-radius: 5px; /* Rounded edges */
